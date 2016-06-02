@@ -2,47 +2,70 @@ import cv2
 import numpy as np
 
 
-def toonify(image):
+def toonify(_image, _canny_threshold_lower=90, _canny_threshold_upper=250):
 
     """
-    toonify converts an image into a cartoonized version of it. The image looks like it has been sketched.
-    :param image:
-    image is the input for the function
+    toonify converts an _image into a cartoonized version of it.
+    The _image looks like it has been sketched.
+
+    The function uses a few algorithms:
+        1. median blur -> it is applied to reduce salt and pepper noise in the _image
+        2. canny edge detection -> it is used to add edges in the final _image
+        3. bilateral filter -> bilateral filter is applied to reduce the details in the _image
+        4. color quantization -> the method reduces the number of colors and leads to clustering of colors
+                                that give the desired color effect in the _image
+    :param
+        1. _image -> _image is the input for the function
+        2. _canny_threshold_lower -> lower threshold value for Canny Edge Detection algorithm
+        3. _canny_threshold_upper -> upper threshold value for Canny Edge Detection algorithm
+        Note- The default thresholds give better results for portrait images.
+        ...The thresholds maintain a balance on the number of edges visible on a face.
+
     :return:
-    the function returns a tooned version of the image
+    the function returns a tooned version of the _image
+
+    :AUTHOR:
+    Anmol Kagrecha (akagrecha@gmail.com)
+    in MENTORSHIP of
+    Ranveer Aggarwal (ranveeraggarwal@gmail.com)
     """
 
-    if image.size is None :
-        return "image does not exist"
+    if _image.size is None:
+        return "_image does not exist"
 
     else:
-        image_copy = image.copy()
+        _image_copy = _image.copy()
 
-        img = cv2.medianBlur(image, 5)
+        _image = cv2.medianBlur(_image, 5)
 
         # edge detection and improvement
-        edges = cv2.Canny(img, 90, 250)
-        edges = cv2.bitwise_not(edges)
-        edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+        _edges = cv2.Canny(_image, _canny_threshold_lower, _canny_threshold_upper)
+        _edges = cv2.bitwise_not(_edges)
+        _edges = cv2.cvtColor(_edges, cv2.COLOR_GRAY2BGR)
 
         # applying bilateral filter to reduce the details
-        image_copy = cv2.bilateralFilter(image_copy, 5, 150, 150)
+        _image_copy = cv2.bilateralFilter(_image_copy, 5, 150, 150)
 
         # color quantization
-        z = image_copy.reshape((-1, 3))
-        z = np.float32(z)
+        """
+        Color quantization uses machine learning.
+        The image array is broken to get BGR values and centroid values are applied to all pixels.
+        Finally the image is reconstructed with new values.
+        """
+        _image_split = _image_copy.reshape((-1, 3))
+        _image_split = np.float32(_image_split)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
         k = 8
-        ret, label, center = cv2.kmeans(z, k, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+        _ret, _label, _center = cv2.kmeans(_image_split, k, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
-        center = np.uint8(center)
-        res = center[label.flatten()]
-        res2 = res.reshape(img.shape)
+        _center = np.uint8(_center)
+        _res = _center[_label.flatten()]
+        _res2 = _res.reshape(img.shape)
 
-        # final image
-        result = cv2.bitwise_and(res2, edges)
+        # final _image
+        _result = cv2.bitwise_and(_res2, _edges)
 
-        return result
+        return _result
 
 img = cv2.imread('portrait2.jpg')
 
